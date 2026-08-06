@@ -1,103 +1,157 @@
 import os
-import feedparser
+import json
+import datetime
+import arxiv
 import requests
-from google import genai
+import google.generativeai as genai
+from dotenv import load_dotenv
+load_dotenv()
 
-# --- 1. 設定情報（環境変数から取得） ---
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
-LINE_USER_ID = os.getenv("LINE_USER_ID")
+# ==========================================
+# 1. 初期設定と認証
+# ==========================================
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+LINE_ACCESS_TOKEN = os.environ.get("LINE_ACCESS_TOKEN")
+LINE_USER_ID = os.environ.get("LINE_USER_ID") # プッシュ通知先
 
-# --- 2. 情報収集 (RSSフィードから記事を取得) ---
-def fetch_latest_articles():
-    # 例：arXiv (AI分野) と はてなブックマーク (心理学・学術系) のRSS
-    rss_urls = [
-        "https://rss.arxiv.org/rss/cs.AI",  # arXiv AI
-        "https://b.hatena.ne.jp/entrylist/knowledge.rss"  # はてな学び・学術
-    ]
-    
-    articles = []
-    for url in rss_urls:
-        feed = feedparser.parse(url)
-        for entry in feed.entries[:5]:  # 各フィードから上位5件を取得
-            articles.append({
-                "title": entry.title,
-                "link": entry.link,
-                "summary": entry.get("summary", "")
-            })
-    return articles
+genai.configure(api_key=GEMINI_API_KEY)
+model = genai.GenerativeModel('gemini-3.1-pro')
 
-# --- 3. AIエージェントによる選定＆要約 ---
-def summarize_with_gemini(articles):
-    client = genai.Client(api_key=GEMINI_API_KEY)
-    
-    # 収集した記事をテキストにまとめる
-    articles_text = ""
-    for i, a in enumerate(articles, 1):
-        articles_text += f"\n[{i}] タイトル: {a['title']}\nURL: {a['link']}\n概要: {a['summary'][:200]}\n"
-
-    prompt = f"""
-あなたは優秀な情報リサーチエージェントです。
-以下は本日収集したニュース・記事・論文のリストです。
-
-【収集データ】
-{articles_text}
-
-【指示】
-1. 上記の中から、「AI技術の最新動向」および「生産性を高める心理学・科学」に関連する特に有益な記事を【合計2〜3本】厳選してください。
-2. 毎朝LINEでサクッと読めるように、以下のフォーマットで出力してください。
-
-【出力フォーマット】
-🌅 本日の厳選リサーチニュース
-
-■ [記事タイトル]
-🔗 [URL]
-💡 3行要約:
-・要点1
-・要点2
-・要点3
-🎯 実践・活用ポイント: (短く)
-
--------------------
-(次の記事)
-"""
-
-    response = client.models.generate_content(
-        model='models/gemini-3.5-flash',
-        contents=prompt
+# ==========================================
+# 2. arXivから前日の論文を取得する関数
+# ==========================================
+def fetch_recent_papers(query, max_results=10):
+    client = arxiv.Client()
+    search = arxiv.Search(
+        query=query,
+        max_results=max_results,
+        sort_by=arxiv.SortCriterion.SubmittedDate
     )
-    return response.text
+    
+    papers = []
+    # 前日の日付を計算（必要に応じてフィルタリング可能）
+    for result in client.results(search):
+        papers.append({
+            "title": result.title,
+            "abstract": result.summary,
+            "url": result.entry_id
+        })
+    return papers
 
-# --- 4. LINEへメッセージ送信 ---
-def send_line_message(text):
-    url = "https://api.line.me/v2/bot/message/push"
+# ==========================================
+# 3. LLMでスコアリングと3行要約を行う関数
+# ==========================================
+def evaluate_and_summarize(papers, evaluation_criteria):
+    evaluated_papers = []
+    
+    for paper in papers:
+        prompt = f"""
+        あなたは最先端論文を評価するリサーチエージェントです。
+        以下の論文を読み、基準に従って評価と要約を行ってください。
+
+        【評価基準】
+        {evaluation_criteria}
+        - 基準への適合度と新規性を1〜10点でスコア化してください。
+
+        【論文データ】
+        タイトル: {paper['title']}
+        Abstract: {paper['abstract']}
+
+        【出力要件】
+        以下のJSON形式のみで出力してください。Markdownのコードブロック(```json)は不要です。
+        {{
+            "score": 8,
+            "summary": [
+                "1行目の要約",
+                "2行目の要約",
+                "3行目の要約"
+            ]
+        }}
+        """
+        try:
+            response = model.generate_content(prompt)
+            # JSONパース（エラーハンドリングを含む）
+            result_json = json.loads(response.text.strip())
+            
+            evaluated_papers.append({
+                "title": paper["title"],
+                "url": paper["url"],
+                "score": result_json.get("score", 0),
+                "summary": result_json.get("summary", ["要約失敗", "-", "-"])
+            })
+        except Exception as e:
+            print(f"LLM処理エラー ({paper['title']}): {e}")
+            continue
+
+    # スコアの降順にソート
+    evaluated_papers.sort(key=lambda x: x["score"], reverse=True)
+    return evaluated_papers
+
+# ==========================================
+# 4. LINEへメッセージを送信する関数 (Flex Message対応準備)
+# ==========================================
+def send_line_message(sections):
+    messages = []
+    for section_title, papers in sections.items():
+        text_content = f"【{section_title}】\n\n"
+        for p in papers:
+            text_content += f"■ {p['title']} (スコア: {p['score']})\n"
+            for line in p['summary']:
+                text_content += f"・{line}\n"
+            text_content += f"{p['url']}\n\n"
+        
+        messages.append({
+            "type": "text",
+            "text": text_content.strip()
+        })
+
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}"
+        "Authorization": f"Bearer {LINE_ACCESS_TOKEN}"
     }
-    payload = {
+    data = {
         "to": LINE_USER_ID,
-        "messages": [
-            {
-                "type": "text",
-                "text": text
-            }
-        ]
+        "messages": messages[:5] # LINE APIの制限で一度に5件まで
     }
-    response = requests.post(url, headers=headers, json=payload)
-    return response.status_code
+    
+    response = requests.post("[https://api.line.me/v2/bot/message/push](https://api.line.me/v2/bot/message/push)", headers=headers, json=data)
+    print("LINE送信ステータス:", response.status_code)
 
-# --- メイン処理 ---
+# ==========================================
+# 5. メイン処理
+# ==========================================
+def main():
+    final_output = {}
+
+    # --- カテゴリ1: AI×通信 ---
+    # ルーティング最適化 (V2Xなどのネットワーク応用を含む)
+    routing_papers = fetch_recent_papers('all:"routing optimization" AND (all:"communication" OR all:"V2X")', 5)
+    routing_eval = evaluate_and_summarize(routing_papers, "通信ネットワークにおけるルーティング最適化の新規性")
+    
+    # KG / GCN を用いた通信
+    gcn_papers = fetch_recent_papers('(all:"Knowledge Graph" OR all:"Graph Convolutional Network") AND all:"communication"', 5)
+    gcn_eval = evaluate_and_summarize(gcn_papers, "ナレッジグラフまたはGCNを用いた通信フレームワークの新規性")
+    
+    # セマンティック通信等
+    semantic_papers = fetch_recent_papers('all:"semantic communication"', 5)
+    semantic_eval = evaluate_and_summarize(semantic_papers, "セマンティック通信技術のブレークスルー")
+
+    # 選定: ルーティング1件、KG/GCN2件 (もし不足していればセマンティック通信から補填)
+    ai_comms_selected = routing_eval[:1] + gcn_eval[:2]
+    final_output["🚀 AI×通信 (ルーティング/GCN/セマンティック)"] = ai_comms_selected
+
+    # --- カテゴリ2: AIの学習・研究活用 ---
+    research_papers = fetch_recent_papers('all:"AI in education" OR all:"LLM reasoning" OR all:"research assistant"', 10)
+    research_eval = evaluate_and_summarize(research_papers, "AIの学習・研究プロセスへの効果的な活用例としての実用性")
+    final_output["📚 AIの学習・研究活用"] = research_eval[:3]
+
+    # --- カテゴリ3: AI×心理学 ---
+    psych_papers = fetch_recent_papers('all:"psychology" AND (all:"artificial intelligence" OR all:"LLM")', 10)
+    psych_eval = evaluate_and_summarize(psych_papers, "AIと心理学・認知科学を組み合わせた研究の面白さと新規性")
+    final_output["🧠 AI×心理学"] = psych_eval[:3]
+
+    # LINEへ送信
+    send_line_message(final_output)
+
 if __name__ == "__main__":
-    print("情報収集を開始します...")
-    articles = fetch_latest_articles()
-    
-    print("Geminiで分析・要約中...")
-    summary = summarize_with_gemini(articles)
-    
-    print("LINEへ送信中...")
-    status = send_line_message(summary)
-    if status == 200:
-        print("送信完了しました！")
-    else:
-        print(f"送信失敗: {status}")
+    main()

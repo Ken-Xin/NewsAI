@@ -15,7 +15,7 @@ LINE_ACCESS_TOKEN = os.environ.get("LINE_ACCESS_TOKEN")
 LINE_USER_ID = os.environ.get("LINE_USER_ID") # プッシュ通知先
 
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-3.1-pro')
+model = genai.GenerativeModel('model/gemini-3.1-pro')
 
 # ==========================================
 # 2. arXivから前日の論文を取得する関数
@@ -113,8 +113,8 @@ def send_line_message(sections):
         "to": LINE_USER_ID,
         "messages": messages[:5] # LINE APIの制限で一度に5件まで
     }
-    
-    response = requests.post("[https://api.line.me/v2/bot/message/push](https://api.line.me/v2/bot/message/push)", headers=headers, json=data)
+
+    response = requests.post("https://api.line.me/v2/bot/message/push", headers=headers, json=data)
     print("LINE送信ステータス:", response.status_code)
 
 # ==========================================

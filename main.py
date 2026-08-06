@@ -1,6 +1,8 @@
 import os
 import json
 import datetime
+import time  # 追記: APIの待機時間用
+import re    # 追記: 余計な文字を削除するため
 import arxiv
 import requests
 import google.generativeai as genai
@@ -15,7 +17,7 @@ LINE_ACCESS_TOKEN = os.environ.get("LINE_ACCESS_TOKEN")
 LINE_USER_ID = os.environ.get("LINE_USER_ID") # プッシュ通知先
 
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('model/gemini-3.1-pro')
+model = genai.GenerativeModel('models/gemini-3.5-flash')
 
 # ==========================================
 # 2. arXivから前日の論文を取得する関数
@@ -39,7 +41,7 @@ def fetch_recent_papers(query, max_results=10):
     return papers
 
 # ==========================================
-# 3. LLMでスコアリングと3行要約を行う関数
+# 3. LLMでスコアリングと3行要約を行う関数 (修正版)
 # ==========================================
 def evaluate_and_summarize(papers, evaluation_criteria):
     evaluated_papers = []
@@ -58,7 +60,7 @@ def evaluate_and_summarize(papers, evaluation_criteria):
         Abstract: {paper['abstract']}
 
         【出力要件】
-        以下のJSON形式のみで出力してください。Markdownのコードブロック(```json)は不要です。
+        以下のJSON形式のみで出力してください。
         {{
             "score": 8,
             "summary": [
@@ -70,18 +72,33 @@ def evaluate_and_summarize(papers, evaluation_criteria):
         """
         try:
             response = model.generate_content(prompt)
-            # JSONパース（エラーハンドリングを含む）
-            result_json = json.loads(response.text.strip())
+            text = response.text.strip()
+            
+            # --- JSONパースの堅牢化（余計なマークダウン記号を削る） ---
+            text = re.sub(r"^```(?:json)?", "", text)
+            text = re.sub(r"```$", "", text)
+            text = text.strip()
+            
+            result_json = json.loads(text)
             
             evaluated_papers.append({
                 "title": paper["title"],
                 "url": paper["url"],
                 "score": result_json.get("score", 0),
-                "summary": result_json.get("summary", ["要約失敗", "-", "-"])
+                "summary": result_json.get("summary", ["要約情報の取得に失敗しました", "-", "-"])
             })
         except Exception as e:
+            # エラーが起きてもスキップせず、タイトルとURLだけはリストに残す（フェイルセーフ）
             print(f"LLM処理エラー ({paper['title']}): {e}")
-            continue
+            evaluated_papers.append({
+                "title": paper["title"],
+                "url": paper["url"],
+                "score": 0,
+                "summary": ["⚠️ 要約の生成に失敗しました", f"エラー詳細: {e}"]
+            })
+            
+        # APIのレート制限（Too Many Requests）を避けるために3秒待機
+        time.sleep(3)
 
     # スコアの降順にソート
     evaluated_papers.sort(key=lambda x: x["score"], reverse=True)

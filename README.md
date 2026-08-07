@@ -71,7 +71,7 @@ GitHubリポジトリの Settings > Secrets and variables > Actions にて、以
 設定完了後、.github/workflows/daily_agent.yml のスケジュールに基づき、毎日UTC 22:00（日本時間 午前7:00）に自動実行されます。Actionsタブから `workflow_dispatch` を用いた手動実行も可能です。
 
 ### 6. Demo
-![デモ画像](https://github.com/Ken-Xin/NewsAI/tree/master/images)
+![デモ画像](images/demo.jpg)
 
 ### 7.ディレクトリ構成 (Project Structure)
 

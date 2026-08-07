@@ -2,7 +2,7 @@
 
 最新の学術論文（arXiv）から特定のテーマに関する研究を毎朝自動で収集・評価・要約し、LINEへ配信するパーソナルAIエージェントです。
 
-### 機能 (Features)
+### 1.機能 (Features)
 
 - 論文の自動収集: arXiv APIを活用し、前日にパブリッシュされた最新論文を取得。
 
@@ -12,7 +12,7 @@
 
 - 完全自動化: GitHub Actionsのcron機能により、サーバーレスで毎朝7時（JST）に定期実行。
 
-### ターゲット領域 (Research Topics)
+### 2.ターゲット領域 (Research Topics)
 
 本エージェントは、以下の特定ドメインにおける最新研究を重点的にトラッキングします。
 
@@ -22,7 +22,7 @@
 
 - AI × 心理学: 認知科学とAIの交差点、独自性と面白さのある研究
 
-### 技術スタック (Tech Stack)
+### 3.技術スタック (Tech Stack)
 
 - 言語: Python 3
 
@@ -32,20 +32,20 @@
 
 - 外部API: Google Gemini API, LINE Messaging API
 
-### ローカル環境での実行方法 (Local Setup)
+### 4.ローカル環境での実行方法 (Local Setup)
 
-#### 1.リポジトリのクローン
+##### 4.1.リポジトリのクローン
 
-`git clone <your-repository-url>`
+`git clone `
 `cd newsai`
 
 
-#### 2.依存関係のインストール
+##### 4.2.依存関係のインストール
 
 `pip install -r requirements.txt`
 
 
-#### 3.環境変数の設定
+##### 4.3.環境変数の設定
 プロジェクトのルートディレクトリに .env ファイルを作成し、以下のAPIキーを設定します。
 
 `GEMINI_API_KEY=your_gemini_api_key`
@@ -53,12 +53,12 @@
 `LINE_USER_ID=your_line_user_id`
 
 
-#### 4.スクリプトの実行
+##### 4.4.スクリプトの実行
 
 `python3 main.py`
 
 
-### GitHub Actions での自動化設定 (Deployment)
+### 5.GitHub Actions での自動化設定 (Deployment)
 
 GitHubリポジトリの Settings > Secrets and variables > Actions にて、以下のRepository Secretsを登録します。
 
@@ -68,9 +68,9 @@ GitHubリポジトリの Settings > Secrets and variables > Actions にて、以
 
 `LINE_USER_ID`
 
-設定完了後、.github/workflows/daily_agent.yml のスケジュールに基づき、毎日UTC 22:00（日本時間 午前7:00）に自動実行されます。Actionsタブから workflow_dispatch を用いた手動実行も可能です。
+設定完了後、.github/workflows/daily_agent.yml のスケジュールに基づき、毎日UTC 22:00（日本時間 午前7:00）に自動実行されます。Actionsタブから `workflow_dispatch` を用いた手動実行も可能です。
 
-### ディレクトリ構成 (Project Structure)
+### 6.ディレクトリ構成 (Project Structure)
 
 ```
 newsai/ 

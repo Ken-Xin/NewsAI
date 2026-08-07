@@ -50,10 +50,11 @@ def evaluate_and_summarize(papers, evaluation_criteria):
         prompt = f"""
         あなたは最先端論文を評価するリサーチエージェントです。
         以下の論文を読み、基準に従って評価と要約を行ってください。
+        １行目は論文の要点を簡潔にまとめ、２行目は研究の新規性や独自性、３行目は実用性や応用可能性について述べてください。
 
         【評価基準】
         {evaluation_criteria}
-        - 基準への適合度と新規性を1〜10点でスコア化してください。
+        - 基準への適合度と新規性を1〜5点でスコア化してください。
 
         【論文データ】
         タイトル: {paper['title']}
@@ -145,27 +146,23 @@ def main():
     routing_papers = fetch_recent_papers('all:"routing optimization" AND (all:"communication" OR all:"V2X")', 5)
     routing_eval = evaluate_and_summarize(routing_papers, "通信ネットワークにおけるルーティング最適化の新規性")
     
-    # KG / GCN を用いた通信
-    gcn_papers = fetch_recent_papers('(all:"Knowledge Graph" OR all:"Graph Convolutional Network") AND all:"communication"', 5)
-    gcn_eval = evaluate_and_summarize(gcn_papers, "ナレッジグラフまたはGCNを用いた通信フレームワークの新規性")
-    
     # セマンティック通信等
     semantic_papers = fetch_recent_papers('all:"semantic communication"', 5)
-    semantic_eval = evaluate_and_summarize(semantic_papers, "セマンティック通信技術のブレークスルー")
+    semantic_eval = evaluate_and_summarize(semantic_papers, "セマンティック通信技術の新規性と実用性")
 
-    # 選定: ルーティング1件、KG/GCN2件 (もし不足していればセマンティック通信から補填)
-    ai_comms_selected = routing_eval[:1] + gcn_eval[:2]
-    final_output["🚀 AI×通信 (ルーティング/GCN/セマンティック)"] = ai_comms_selected
+    # 選定: ルーティング1件、セマンティック通信2件 
+    ai_comms_selected = routing_eval[:1] + semantic_eval[:2]
+    final_output["🚀 AI×通信 (ルーティング/セマンティック)"] = ai_comms_selected
 
     # --- カテゴリ2: AIの学習・研究活用 ---
-    research_papers = fetch_recent_papers('all:"AI in education" OR all:"LLM reasoning" OR all:"research assistant"', 10)
+    research_papers = fetch_recent_papers('all:"AI in education" OR all:"LLM reasoning" OR all:"research assistant"', 3)
     research_eval = evaluate_and_summarize(research_papers, "AIの学習・研究プロセスへの効果的な活用例としての実用性")
-    final_output["📚 AIの学習・研究活用"] = research_eval[:3]
+    final_output["📚 AIの学習・研究活用"] = research_eval[:1]
 
     # --- カテゴリ3: AI×心理学 ---
-    psych_papers = fetch_recent_papers('all:"psychology" AND (all:"artificial intelligence" OR all:"LLM")', 10)
+    psych_papers = fetch_recent_papers('all:"psychology" AND (all:"artificial intelligence" OR all:"LLM")', 3)
     psych_eval = evaluate_and_summarize(psych_papers, "AIと心理学・認知科学を組み合わせた研究の面白さと新規性")
-    final_output["🧠 AI×心理学"] = psych_eval[:3]
+    final_output["🧠 AI×心理学"] = psych_eval[:1]
 
     # LINEへ送信
     send_line_message(final_output)

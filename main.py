@@ -98,7 +98,7 @@ def evaluate_and_summarize(papers, evaluation_criteria):
             })
             
         # APIのレート制限（Too Many Requests）を避けるために3秒待機
-        time.sleep(3)
+        time.sleep(5)
 
     # スコアの降順にソート
     evaluated_papers.sort(key=lambda x: x["score"], reverse=True)

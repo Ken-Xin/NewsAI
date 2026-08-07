@@ -152,17 +152,17 @@ def main():
 
     # 選定: ルーティング1件、セマンティック通信2件 
     ai_comms_selected = routing_eval[:1] + semantic_eval[:2]
-    final_output["🚀 AI×通信 (ルーティング/セマンティック)"] = ai_comms_selected
+    final_output[" AI×通信 (ルーティング/セマンティック)"] = ai_comms_selected
 
     # --- カテゴリ2: AIの学習・研究活用 ---
     research_papers = fetch_recent_papers('all:"AI in education" OR all:"LLM reasoning" OR all:"research assistant"', 3)
     research_eval = evaluate_and_summarize(research_papers, "AIの学習・研究プロセスへの効果的な活用例としての実用性")
-    final_output["📚 AIの学習・研究活用"] = research_eval[:1]
+    final_output[" AIの学習・研究活用"] = research_eval[:1]
 
     # --- カテゴリ3: AI×心理学 ---
     psych_papers = fetch_recent_papers('all:"psychology" AND (all:"artificial intelligence" OR all:"LLM")', 3)
     psych_eval = evaluate_and_summarize(psych_papers, "AIと心理学・認知科学を組み合わせた研究の面白さと新規性")
-    final_output["🧠 AI×心理学"] = psych_eval[:1]
+    final_output[" AI×心理学"] = psych_eval[:1]
 
     # LINEへ送信
     send_line_message(final_output)

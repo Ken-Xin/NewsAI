@@ -143,11 +143,11 @@ def main():
 
     # --- カテゴリ1: AI×通信 ---
     # ルーティング最適化 (V2Xなどのネットワーク応用を含む)
-    routing_papers = fetch_recent_papers('all:"routing optimization" AND (all:"communication" OR all:"V2X")', 5)
+    routing_papers = fetch_recent_papers('all:"routing optimization" AND (all:"communication" OR all:"V2X")', 2)
     routing_eval = evaluate_and_summarize(routing_papers, "通信ネットワークにおけるルーティング最適化の新規性")
     
     # セマンティック通信等
-    semantic_papers = fetch_recent_papers('all:"semantic communication"', 5)
+    semantic_papers = fetch_recent_papers('all:"semantic communication"', 2)
     semantic_eval = evaluate_and_summarize(semantic_papers, "セマンティック通信技術の新規性と実用性")
 
     # 選定: ルーティング1件、セマンティック通信2件 
@@ -155,12 +155,12 @@ def main():
     final_output[" AI×通信 (ルーティング/セマンティック)"] = ai_comms_selected
 
     # --- カテゴリ2: AIの学習・研究活用 ---
-    research_papers = fetch_recent_papers('all:"AI in education" OR all:"LLM reasoning" OR all:"research assistant"', 3)
-    research_eval = evaluate_and_summarize(research_papers, "AIの学習・研究プロセスへの効果的な活用例としての実用性")
+    research_papers = fetch_recent_papers('all:"AI in education" OR all:"LLM reasoning" OR all:"research assistant"', 2)
+    research_eval = evaluate_and_summarize(research_papers, "AIの教育分野への効果的な活用例としての実用性")
     final_output[" AIの学習・研究活用"] = research_eval[:1]
 
     # --- カテゴリ3: AI×心理学 ---
-    psych_papers = fetch_recent_papers('all:"psychology" AND (all:"artificial intelligence" OR all:"LLM")', 3)
+    psych_papers = fetch_recent_papers('all:"psychology" AND (all:"artificial intelligence" OR all:"LLM")', 2)
     psych_eval = evaluate_and_summarize(psych_papers, "AIと心理学・認知科学を組み合わせた研究の面白さと新規性")
     final_output[" AI×心理学"] = psych_eval[:1]
 

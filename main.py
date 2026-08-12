@@ -147,7 +147,7 @@ def main():
     routing_eval = evaluate_and_summarize(routing_papers, "通信ネットワークにおけるルーティング最適化の新規性")
     
     # セマンティック通信等
-    semantic_papers = fetch_recent_papers('all:"semantic communication"', 2)
+    semantic_papers = fetch_recent_papers('all:"semantic communication"', 3)
     semantic_eval = evaluate_and_summarize(semantic_papers, "セマンティック通信技術の新規性と実用性")
 
     # 選定: ルーティング1件、セマンティック通信2件 

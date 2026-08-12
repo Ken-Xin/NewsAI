@@ -23,22 +23,59 @@ model = genai.GenerativeModel('models/gemini-3.5-flash')
 # 2. arXivから前日の論文を取得する関数
 # ==========================================
 def fetch_recent_papers(query, max_results=10):
-    client = arxiv.Client()
-    search = arxiv.Search(
-        query=query,
-        max_results=max_results,
-        sort_by=arxiv.SortCriterion.SubmittedDate
-    )
-    
+    """Fetch recent papers using the arxiv package with a requests XML fallback.
+    Returns list of dicts: {title, abstract, url}.
+    """
     papers = []
-    # 前日の日付を計算（必要に応じてフィルタリング可能）
-    for result in client.results(search):
-        papers.append({
-            "title": result.title,
-            "abstract": result.summary,
-            "url": result.entry_id
-        })
-    return papers
+
+    # Primary: use arxiv.Client() (if available and working)
+    try:
+        client = arxiv.Client()
+        search = arxiv.Search(
+            query=query,
+            max_results=max_results,
+            sort_by=arxiv.SortCriterion.SubmittedDate
+        )
+
+        for result in client.results(search):
+            papers.append({
+                "title": result.title,
+                "abstract": getattr(result, 'summary', '') or getattr(result, 'abstract', ''),
+                "url": getattr(result, 'entry_id', getattr(result, 'id', ''))
+            })
+
+        if papers:
+            return papers
+    except Exception as e:
+        print(f"arxiv.Client() failed: {e}")
+
+    # Fallback: call export.arxiv.org API directly using requests (robust to some package/API mismatches)
+    try:
+        q = requests.utils.requote_uri(f"https://export.arxiv.org/api/query?search_query={query}&start=0&max_results={max_results}")
+        headers = {"User-Agent": "NewsAI/1.0 (+https://example.org)"}
+        resp = requests.get(q, headers=headers, timeout=15)
+        resp.raise_for_status()
+
+        # Parse Atom XML
+        import xml.etree.ElementTree as ET
+        ns = {'atom': 'http://www.w3.org/2005/Atom'}
+        root = ET.fromstring(resp.text)
+        entries = root.findall('atom:entry', ns)
+        for e in entries:
+            title = (e.find('atom:title', ns).text or '').strip()
+            summary = (e.find('atom:summary', ns).text or '').strip()
+            id_ = (e.find('atom:id', ns).text or '').strip()
+            papers.append({
+                'title': title,
+                'abstract': summary,
+                'url': id_
+            })
+        return papers
+    except Exception as e:
+        print(f"Fallback arXiv HTTP fetch failed: {e}")
+
+    # If all methods fail, return empty list
+    return []
 
 # ==========================================
 # 3. LLMでスコアリングと3行要約を行う関数 (修正版)

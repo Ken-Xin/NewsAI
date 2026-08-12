@@ -143,7 +143,7 @@ def main():
 
     # --- カテゴリ1: AI×通信 ---
     # ルーティング最適化 (V2Xなどのネットワーク応用を含む)
-    routing_papers = fetch_recent_papers('all:"routing optimization" AND (all:"communication" OR all:"V2X")', 2)
+    routing_papers = fetch_recent_papers('all:"routing optimization" AND (all:"communication" OR all:"V2X")', 3)
     routing_eval = evaluate_and_summarize(routing_papers, "通信ネットワークにおけるルーティング最適化の新規性")
     
     # セマンティック通信等

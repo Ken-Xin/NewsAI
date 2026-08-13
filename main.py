@@ -13,7 +13,7 @@ load_dotenv()
 # 1. 初期設定と認証
 # ==========================================
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
-LINE_ACCESS_TOKEN = os.environ.get("LINE_ACCESS_TOKEN")
+LINE_CHANNEL_ACCESS_TOKEN = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN")
 LINE_USER_ID = os.environ.get("LINE_USER_ID")
 MODEL_CANDIDATES = [
     "gemini-3.5-flash"
@@ -251,8 +251,8 @@ def send_line_message(sections):
             "text": text_content.strip()
         })
 
-    if not LINE_ACCESS_TOKEN:
-        print("LINE_ACCESS_TOKEN が設定されていません。LINE送信をスキップします。")
+    if not LINE_CHANNEL_ACCESS_TOKEN:
+        print("LINE_CHANNEL_ACCESS_TOKEN が設定されていません。LINE送信をスキップします。")
         return
 
     if not LINE_USER_ID:
@@ -261,7 +261,7 @@ def send_line_message(sections):
 
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {LINE_ACCESS_TOKEN}"
+        "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}"
     }
     data = {
         "to": LINE_USER_ID,

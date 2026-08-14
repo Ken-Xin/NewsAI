@@ -6,6 +6,7 @@ import arxiv
 import requests
 import google.generativeai as genai
 from dotenv import load_dotenv
+import random
 
 load_dotenv()
 
@@ -53,7 +54,11 @@ def fetch_recent_papers(query, max_results=10):
 
     # Primary: use arxiv.Client() (if available and working)
     try:
-        client = arxiv.Client()
+        client = arxiv.Client(
+            page_size=10,
+            delay_seconds=3.0,  # リクエスト間隔を空ける
+            num_retries=3,      # リトライ回数を指定
+        )
         search = arxiv.Search(
             query=query,
             max_results=max_results,

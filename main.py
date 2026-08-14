@@ -84,8 +84,24 @@ def fetch_recent_papers(query, max_results=10):
         )
         headers = {"User-Agent": "NewsAI-Bot/1.0 (mailto:0108nin@gmail.com)",
                 "Accept": "application/atom+xml",}
-        resp = requests.get(q, headers=headers, timeout=15)
-        resp.raise_for_status()
+# リトライ処理の導入 (最大3回)
+        max_retries = 3
+        for attempt in range(max_retries):
+            resp = requests.get(q, headers=headers, timeout=15)
+                
+                # 406 (Not Acceptable) または 429 (Too Many Requests) の場合は待機してリトライ
+            if resp.status_code in (406, 429):
+                sleep_time = random.uniform(5.0, 15.0)
+                print(f"arXiv APIから HTTP {resp.status_code} を受信。{sleep_time:.1f}秒待機して再試行します (Attempt {attempt + 1}/{max_retries})...")
+                time.sleep(sleep_time)
+                continue
+                
+                # それ以外のエラーは例外を発生させる
+            resp.raise_for_status()
+            break # 成功した場合はループを抜ける
+        else:
+                # 最大リトライ回数に達しても成功しなかった場合
+            raise Exception("最大リトライ回数に達しましたが、論文データを取得できませんでした。")        
 
         import xml.etree.ElementTree as ET
         ns = {'atom': 'http://www.w3.org/2005/Atom'}

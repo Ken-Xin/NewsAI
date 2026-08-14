@@ -3,7 +3,7 @@ name: Daily NewsAI Agent
 on:
   schedule:
     # JSTの朝7時はUTCの22時
-    - cron: '0 22 * * *'
+    - cron: '42 21 * * *'
   workflow_dispatch: # 手動実行用ボタンも残しておきます
 
 jobs:

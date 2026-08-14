@@ -82,7 +82,8 @@ def fetch_recent_papers(query, max_results=10):
         q = requests.utils.requote_uri(
             f"https://export.arxiv.org/api/query?search_query={query}&start=0&max_results={max_results}"
         )
-        headers = {"User-Agent": "NewsAI/1.0 (+https://example.org)"}
+        headers = {"User-Agent": "NewsAI-Bot/1.0 (mailto:0108nin@gmail.com)",
+                "Accept": "application/atom+xml",}
         resp = requests.get(q, headers=headers, timeout=15)
         resp.raise_for_status()
 
